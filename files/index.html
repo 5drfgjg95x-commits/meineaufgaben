@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Aufgaben</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#EAF4FB">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="translucent-black">
+<meta name="apple-mobile-web-app-title" content="Aufgaben">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===== Home ===== -->
+  <header class="topbar">
+    <div class="topbar-spacer"></div>
+    <h1>Aufgaben</h1>
+    <button id="settingsBtn" class="icon-btn" aria-label="Einstellungen">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M19.14 12.94a7.07 7.07 0 0 0 .06-.94 7.07 7.07 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 14 2h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.3 7.3 0 0 0-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.77 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0-.06.94 7.07 7.07 0 0 0 .06.94L2.9 14.52a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.04.71 1.62.94l.36 2.54a.5.5 0 0 0 .5.42H14a.5.5 0 0 0 .5-.42l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12.06 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
+    </button>
+  </header>
+
+  <main id="content">
+    <div id="emptyState" class="empty-state hidden">
+      <div class="empty-icon">🗂️</div>
+      <p class="empty-title">Noch keine Verbindung</p>
+      <p class="empty-text">Hinterlege deine Trello-Zugangsdaten in den Einstellungen, um loszulegen.</p>
+      <button class="pill-btn" id="emptyStateSettingsBtn">Einstellungen öffnen</button>
+    </div>
+
+    <div id="taskSections" class="task-sections"></div>
+  </main>
+
+  <button id="fab" class="fab" aria-label="Neue Aufgabe">
+    <svg viewBox="0 0 24 24" width="26" height="26"><path d="M11 11V4h2v7h7v2h-7v7h-2v-7H4v-2z"/></svg>
+  </button>
+
+  <div id="syncDot" class="sync-dot" aria-hidden="true"></div>
+</div>
+
+<!-- ===== New / Edit Task Sheet ===== -->
+<div id="formSheetOverlay" class="sheet-overlay hidden">
+  <div class="sheet" id="formSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <button class="text-btn" id="formCancel">Abbrechen</button>
+      <h2 id="formTitle">Neue Aufgabe</h2>
+      <button class="text-btn primary" id="formSave">Sichern</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field-group">
+        <input type="text" id="fieldTitle" class="field-input title-input" placeholder="Titel" maxlength="200">
+      </div>
+
+      <div class="field-group">
+        <textarea id="fieldDesc" class="field-input textarea-input" placeholder="Notiz" rows="3"></textarea>
+      </div>
+
+      <div class="field-card">
+        <label class="field-row" for="fieldDue">
+          <span class="field-row-label">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M7 2v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm12 7v9H5V9h14z"/></svg>
+            Fälligkeitsdatum
+          </span>
+          <input type="datetime-local" id="fieldDue" class="field-input date-input">
+        </label>
+        <div class="field-row-actions" id="dueClearRow">
+          <button type="button" id="clearDueBtn" class="link-btn">Datum entfernen</button>
+        </div>
+      </div>
+
+      <div class="field-card">
+        <label class="field-row">
+          <span class="field-row-label">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 5h2v2H3V5zm4 0h14v2H7V5zM3 11h2v2H3v-2zm4 0h14v2H7v-2zM3 17h2v2H3v-2zm4 0h14v2H7v-2z"/></svg>
+            Checkliste hinzufügen
+          </span>
+          <span class="switch">
+            <input type="checkbox" id="fieldChecklistToggle">
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+          </span>
+        </label>
+
+        <div id="checklistEditor" class="checklist-editor hidden">
+          <div id="checklistItemsEdit" class="checklist-items-edit"></div>
+          <button type="button" id="addChecklistItemBtn" class="link-btn add-item-btn">+ Punkt hinzufügen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Task Detail Sheet ===== -->
+<div id="detailSheetOverlay" class="sheet-overlay hidden">
+  <div class="sheet" id="detailSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <button class="text-btn" id="detailClose">Schließen</button>
+      <h2>Aufgabe</h2>
+      <button class="icon-btn small" id="detailEditBtn" aria-label="Bearbeiten">
+        <svg viewBox="0 0 24 24" width="19" height="19"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <h3 id="detailTitle" class="detail-title"></h3>
+      <div id="detailDue" class="detail-due"></div>
+      <p id="detailDesc" class="detail-desc"></p>
+
+      <div id="detailChecklistWrap" class="detail-checklist-wrap hidden">
+        <div class="checklist-progress">
+          <div class="checklist-progress-track"><div id="checklistProgressBar" class="checklist-progress-bar"></div></div>
+          <span id="checklistProgressLabel" class="checklist-progress-label"></span>
+        </div>
+        <div id="detailChecklistItems" class="detail-checklist-items"></div>
+      </div>
+
+      <button id="completeTaskBtn" class="complete-btn">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+        Aufgabe erledigen
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Settings Sheet ===== -->
+<div id="settingsOverlay" class="sheet-overlay hidden">
+  <div class="sheet" id="settingsSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <button class="text-btn" id="settingsClose">Fertig</button>
+      <h2>Einstellungen</h2>
+      <span class="sheet-header-spacer"></span>
+    </div>
+    <div class="sheet-body">
+      <p class="settings-hint">Diese Angaben findest du auf <span class="mono">trello.com/power-ups/admin</span> bzw. über die Trello-API-Schlüsselseite. Sie werden ausschließlich lokal auf diesem Gerät gespeichert.</p>
+
+      <div class="field-card">
+        <div class="field-row stacked">
+          <span class="field-row-label">Trello API Key</span>
+          <input type="text" id="settingApiKey" class="field-input" placeholder="API Key" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+        <div class="field-row stacked">
+          <span class="field-row-label">Trello Token</span>
+          <input type="text" id="settingToken" class="field-input" placeholder="Token" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+        <div class="field-row stacked">
+          <span class="field-row-label">Board ID</span>
+          <input type="text" id="settingBoardId" class="field-input" placeholder="Board ID" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+        <div class="field-row stacked">
+          <span class="field-row-label">Listen-ID (optional)</span>
+          <input type="text" id="settingListId" class="field-input" placeholder="Leer = alle Listen" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+        <div class="field-row stacked">
+          <span class="field-row-label">Archiv-Listen-ID</span>
+          <input type="text" id="settingArchiveListId" class="field-input" placeholder="Archiv-Listen-ID" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+      </div>
+
+      <button id="settingsSaveBtn" class="pill-btn full">Speichern</button>
+      <p id="settingsStatus" class="settings-status"></p>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
