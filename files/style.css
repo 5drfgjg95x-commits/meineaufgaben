@@ -103,7 +103,6 @@ body {
   align-items: center;
   gap: 6px;
 }
-.section-title.overdue { color: var(--red); }
 .section-title.today { color: var(--blue-deep); }
 .section-title.tomorrow { color: var(--orange); }
 .section-title.future { color: var(--ink-soft); }

@@ -117,18 +117,20 @@ function startOfDay(d) {
 
 function categorize(card) {
   if (!card.due) return "none";
-  const due = new Date(card.due);
+  const due0 = startOfDay(new Date(card.due));
   const today0 = startOfDay(new Date());
   const tomorrow0 = new Date(today0); tomorrow0.setDate(tomorrow0.getDate() + 1);
-  const dayAfter0 = new Date(today0); dayAfter0.setDate(dayAfter0.getDate() + 2);
-  if (due < today0) return "overdue";
-  if (due < tomorrow0) return "today";
-  if (due < dayAfter0) return "tomorrow";
+  if (due0.getTime() <= today0.getTime()) return "today"; // includes overdue tasks
+  if (due0.getTime() === tomorrow0.getTime()) return "tomorrow";
   return "future";
 }
 
+function isOverdue(card) {
+  if (!card.due) return false;
+  return startOfDay(new Date(card.due)).getTime() < startOfDay(new Date()).getTime();
+}
+
 const SECTION_DEFS = [
-  { key: "overdue", label: "Überfällig" },
   { key: "today", label: "Heute" },
   { key: "tomorrow", label: "Morgen" },
   { key: "future", label: "Demnächst" },
@@ -136,7 +138,7 @@ const SECTION_DEFS = [
 ];
 
 function renderTaskSections() {
-  const buckets = { overdue: [], today: [], tomorrow: [], future: [], none: [] };
+  const buckets = { today: [], tomorrow: [], future: [], none: [] };
   tasks.forEach((c) => buckets[categorize(c)].push(c));
   Object.values(buckets).forEach((arr) =>
     arr.sort((a, b) => {
@@ -191,7 +193,8 @@ function renderTaskRow(task, sectionKey, index) {
 
   if (task.due) {
     const due = document.createElement("div");
-    due.className = `task-row-due ${sectionKey === "overdue" ? "overdue" : ""} ${sectionKey === "today" ? "today" : ""}`;
+    const overdue = isOverdue(task);
+    due.className = `task-row-due ${overdue ? "overdue" : ""} ${!overdue && sectionKey === "today" ? "today" : ""}`;
     due.textContent = formatDue(task.due);
     main.appendChild(due);
   }
@@ -227,14 +230,10 @@ function formatDue(iso) {
   const today0 = startOfDay(new Date());
   const tomorrow0 = new Date(today0); tomorrow0.setDate(tomorrow0.getDate() + 1);
   const dDay0 = startOfDay(d);
-  const timeStr = (d.getHours() || d.getMinutes()) ? d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : null;
 
-  let dayStr;
-  if (dDay0.getTime() === today0.getTime()) dayStr = "Heute";
-  else if (dDay0.getTime() === tomorrow0.getTime()) dayStr = "Morgen";
-  else dayStr = d.toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: dDay0.getFullYear() !== today0.getFullYear() ? "numeric" : undefined });
-
-  return timeStr ? `${dayStr}, ${timeStr}` : dayStr;
+  if (dDay0.getTime() === today0.getTime()) return "Heute";
+  if (dDay0.getTime() === tomorrow0.getTime()) return "Morgen";
+  return d.toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: dDay0.getFullYear() !== today0.getFullYear() ? "numeric" : undefined });
 }
 
 /* ============================== New / Edit Sheet ============================== */
@@ -255,10 +254,10 @@ function closeSheet(overlay) {
   if (!anyOpen) modalOpen = false;
 }
 
-function toLocalDatetimeInputValue(iso) {
+function toLocalDateInputValue(iso) {
   const d = new Date(iso);
   const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 function openNewForm() {
@@ -288,7 +287,7 @@ function openEditForm(card) {
   document.getElementById("formTitle").textContent = "Aufgabe bearbeiten";
   document.getElementById("fieldTitle").value = card.name || "";
   document.getElementById("fieldDesc").value = card.desc || "";
-  document.getElementById("fieldDue").value = card.due ? toLocalDatetimeInputValue(card.due) : "";
+  document.getElementById("fieldDue").value = card.due ? toLocalDateInputValue(card.due) : "";
   document.getElementById("fieldChecklistToggle").checked = editingChecklistItems.length > 0;
   document.getElementById("checklistEditor").classList.toggle("hidden", editingChecklistItems.length === 0);
   renderChecklistEditor();
@@ -363,7 +362,7 @@ async function saveForm() {
   }
   const desc = document.getElementById("fieldDesc").value;
   const dueVal = document.getElementById("fieldDue").value;
-  const due = dueVal ? new Date(dueVal).toISOString() : null;
+  const due = dueVal ? new Date(dueVal + "T00:00:00").toISOString() : null;
   const checklistOn = document.getElementById("fieldChecklistToggle").checked;
   const items = checklistOn ? editingChecklistItems.filter((i) => i.name.trim() !== "") : [];
 
@@ -468,9 +467,9 @@ function renderDetail(card) {
   const dueEl = document.getElementById("detailDue");
   dueEl.classList.remove("overdue", "today");
   if (card.due) {
-    const cat = categorize(card);
-    if (cat === "overdue") dueEl.classList.add("overdue");
-    if (cat === "today") dueEl.classList.add("today");
+    const overdue = isOverdue(card);
+    if (overdue) dueEl.classList.add("overdue");
+    else if (categorize(card) === "today") dueEl.classList.add("today");
     dueEl.textContent = "📅 " + formatDue(card.due);
     dueEl.classList.remove("hidden");
   } else {
