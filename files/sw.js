@@ -1,34 +1,67 @@
-const CACHE = "aufgaben-cache-v1";
-const ASSETS = [
+const CACHE_NAME = "aufgaben-app-v1";
+
+const FILES_TO_CACHE = [
+  "./",
   "./index.html",
   "./style.css",
   "./app.js",
   "./manifest.json",
+
   "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/icon-512.png",
+  "./icons/apple-touch-icon.png"
 ];
 
-self.addEventListener("install", (event) => {
+
+self.addEventListener("install", event => {
+
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+
+    caches.open(CACHE_NAME)
+      .then(cache => {
+
+        return cache.addAll(FILES_TO_CACHE);
+
+      })
+
   );
+
 });
 
-self.addEventListener("activate", (event) => {
+
+self.addEventListener("activate", event => {
+
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+
+    caches.keys()
+      .then(keys => {
+
+        return Promise.all(
+
+          keys
+            .filter(key => key !== CACHE_NAME)
+            .map(key => caches.delete(key))
+
+        );
+
+      })
+
   );
+
 });
 
-// Network-first for Trello API calls (never cache live data), cache-first for app shell.
-self.addEventListener("fetch", (event) => {
-  const url = event.request.url;
-  if (url.includes("api.trello.com")) {
-    return; // let it hit the network directly, untouched
-  }
+
+self.addEventListener("fetch", event => {
+
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+
+    caches.match(event.request)
+      .then(response => {
+
+        return response || fetch(event.request);
+
+      })
+
   );
+
 });
